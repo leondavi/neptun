@@ -40,6 +40,14 @@ $$\ell_{ji}^t = \frac{(q_j^t)^T k_i^t}{\sqrt{d_k}} + b_{ji} + \beta_i^t$$
 
 where $g_{i,\text{send}}^t$ is sender gate, $b_{ji}$ is a learnable bond-bias prior, and $\beta_i^t$ is a controller-produced sender-side attention bias.
 
+Interpretation of the sender-gated value equation:
+
+- $v_i^t$ is node $i$'s raw message/value vector at communication step $t$.
+- $g_{i,\text{send}}^t$ is a learned sender gate (typically in $[0,1]$ per channel).
+- $\odot$ is element-wise multiplication, so each channel of $v_i^t$ is scaled independently.
+
+This means communication is filtered before routing: channels with high gate values are transmitted strongly, while channels with low gate values are attenuated or suppressed.
+
 A useful conceptual interpretation is still to view communication as learned vector embeddings in a shared space:
 
 $$e_{i \to j}^t = W_e [h_i^t; c_{i,\text{send}}^t] \in \mathbb{R}^{d_c}$$
