@@ -21,7 +21,7 @@ where:
 
 ### Message Passing
 
-Outgoing message from neuron $i$ to neuron $j$:
+General DNBN message-passing form:
 
 $$m_{i \to j}^t = A_{ij} \cdot \phi(h_i^t, c_{i,\text{send}}^t)$$
 
@@ -30,7 +30,17 @@ where:
 - $\phi$ is the sender function
 - $c_{i,\text{send}}^t$ is the sender's communication state
 
-In practice, DNBN treats $m_{i \to j}^t$ as a learned **vector embedding** in a shared communication space:
+In current Neptun implementation, communication is instantiated through graph-transformer projections and controller gating:
+
+$$q_i^t = W_q h_i^t, \quad k_i^t = W_k h_i^t, \quad v_i^t = W_v h_i^t$$
+
+$$\hat{v}_i^t = v_i^t \odot g_{i,\text{send}}^t$$
+
+$$\ell_{ji}^t = \frac{(q_j^t)^T k_i^t}{\sqrt{d_k}} + b_{ji} + \beta_i^t$$
+
+where $g_{i,\text{send}}^t$ is sender gate, $b_{ji}$ is a learnable bond-bias prior, and $\beta_i^t$ is a controller-produced sender-side attention bias.
+
+A useful conceptual interpretation is still to view communication as learned vector embeddings in a shared space:
 
 $$e_{i \to j}^t = W_e [h_i^t; c_{i,\text{send}}^t] \in \mathbb{R}^{d_c}$$
 
@@ -42,11 +52,19 @@ Each communication neuron maintains a short-term message buffer:
 
 $$B_j^t = \text{BufferUpdate}(B_j^{t-1}, \{e_{i \to j}^t\}_i)$$
 
-The buffer stores recent incoming embeddings, making communication temporal rather than purely instantaneous. A simple form is a fixed-length FIFO queue; a trainable form uses decay and gating:
+The buffer stores recent incoming embeddings, making communication temporal rather than purely instantaneous.
 
-$$B_j^t = \gamma B_j^{t-1} + (1-\gamma) \sum_i \alpha_{ij}^t e_{i \to j}^t$$
+Current Neptun implementation uses a fixed-length FIFO update:
 
-where $\gamma \in [0,1)$ controls memory persistence and $\alpha_{ij}^t$ are attention weights.
+$$B_j^t = \text{RollLeft}(B_j^{t-1}), \quad B_j^t[-1] \leftarrow m_j^t$$
+
+where $m_j^t$ is the newly aggregated message for receiver $j$.
+
+Readout from this FIFO buffer is attention-based with learnable decay weighting over buffer positions:
+
+$$r_j^t = \text{AttnReadout}(B_j^t; h_j^t, \gamma)$$
+
+where $\gamma \in [0,1)$ controls temporal weighting in readout.
 
 ### Message Aggregation
 
@@ -98,36 +116,25 @@ Together, these make DNBN communication comparable to a distributed memory-and-a
 
 ### Learnable Adjacency Matrix
 
-Bonds are represented by a learnable matrix $A$, where $A_{ij}$ controls communication strength from node $i$ to node $j$.
+Bonds are represented in current implementation as a learnable bias matrix $B$, where $B_{ji}$ is added to attention logits for communication from node $i$ to node $j$.
 
-Three progressive methods:
+Current status in Neptun:
 
-#### 1. Soft Bonds (Recommended Start)
-$$A_{ij} \in [0, 1], \quad A_{ij} = \sigma(w_{ij})$$
-
-Train the raw parameter $w_{ij}$ with gradient descent. The sigmoid constraint keeps bonds in a valid range. This is the most stable approach.
-
-#### 2. Hard Bonds with Gates
-Learn a gate $g_{ij}$ and threshold it for on/off decisions. Requires gradient relaxations (e.g., straight-through estimator or Gumbel-softmax) since discrete decisions break standard gradients.
-
-#### 3. Prune and Sprout
-Periodically remove edges where $A_{ij} < \epsilon$ and generate candidate new edges based on neuron similarity:
-
-$$A_{ij}^{\text{candidate}} = \sigma(q(h_i)^T k(h_j))$$
-
-Keep new edges only if they improve loss. This is the most biologically inspired approach.
+1. **Implemented**: soft bond-bias priors in attention logits (unbounded real-valued parameters, regularized with L1).
+2. **Implemented**: optional top-$k$ sparsification in attention routing.
+3. **Not yet implemented**: hard bond thresholding and prune/sprout rewiring.
 
 ### Selective Bond Formation
 
-For targeted connectivity, bond scores derive from neuron features:
+For targeted connectivity, attention scores derive from node features:
 
-$$A_{ij} = \sigma(q(h_i)^T k(h_j))$$
+$$s_{ji} = \frac{q(h_j)^T k(h_i)}{\sqrt{d_k}} + b_{ji}$$
 
-With top-$k$ restriction per neuron to prevent fully-connected (and unstable) topologies.
+with optional top-$k$ restriction per receiver to prevent fully-connected (and unstable) topologies.
 
 ## Training Objective
 
-The total loss combines task performance with communication efficiency:
+General DNBN objective can combine task performance with communication efficiency:
 
 $$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{task}} + \lambda_1 \mathcal{L}_{\text{bandwidth}} + \lambda_2 \mathcal{L}_{\text{sparsity}} + \lambda_3 \mathcal{L}_{\text{stability}}$$
 
@@ -137,14 +144,18 @@ where:
 - $\mathcal{L}_{\text{sparsity}}$: $L_1$ penalty on bond strengths: $\sum_{i,j} |A_{ij}|$
 - $\mathcal{L}_{\text{stability}}$: Regularizer for training stability
 
-The sparsity penalty is critical — it pushes weak bonds toward zero, naturally pruning the communication graph to retain only the useful connections.
+Current Neptun implementation uses:
+
+$$\mathcal{L}_{\text{impl}} = \mathcal{L}_{\text{task}} + \lambda_s \lVert B \rVert_1 + \lambda_c \mathcal{L}_{\text{comm-proxy}}$$
+
+where $\mathcal{L}_{\text{comm-proxy}}$ is computed from attention outputs and bond magnitudes. This is a practical proxy and not yet a strict bandwidth-accurate simulator.
 
 ## Training Loop
 
 1. Initialize parameters for state update, sender, receiver, and output modules
 2. Forward pass over time: update neuron states, produce messages, aggregate, compute outputs
 3. Compute task loss (cross-entropy for classification)
-4. Add communication regularizers (sparsity, bandwidth)
+4. Add communication regularizers (currently bond sparsity + communication proxy)
 5. Backpropagate through the full unrolled computation graph (truncated BPTT if needed)
 6. Update parameters with Adam
 
@@ -173,26 +184,23 @@ This allows the system to perform distributed evidence integration: one model ca
 
 ```mermaid
 flowchart LR
-	A[Local Neuron State h_i^t] --> B[Sender Projection W_e]
-	B --> C[Message Embedding e_{i->j}^t]
-	C --> D[Communication Neuron Buffer B_j^t]
-	D --> E[Cooperative Attention alpha_{ij}^t]
-	E --> F[Aggregated Message u~_j^t]
-	F --> G[Receive Filter psi]
-	G --> H[Updated Receiver State h_j^{t+1}]
+	A[Local Expert State h_i^t] --> B[Q/K/V Projections]
+	B --> C[Sender Gate and Bond-Bias Attention]
+	C --> D[Aggregated Message m_j^t]
+	D --> E[FIFO Buffer Update B_j^t]
+	E --> F[Buffer Attention Readout r_j^t]
+	F --> G[Receive Gate]
+	G --> H[State GRU Update h_j^{t+1}]
 ```
 
 The key cooperative loop is that updated receiver states produce new embeddings in the next round, so attention and message buffer content co-evolve over time.
 
 ## Bandwidth and Overlap
 
-Communication neuron capacity (C) is allocated across connections:
+Conceptually, communication neuron capacity (C) can be allocated across connections:
 
-- Each connection uses a slice of the sender's C-dimensional output
-- Multiple connections can have overlapping bandwidth allocations
-- On the receiver side, multiple incoming messages can target overlapping neuron ranges
-- Overlapping messages are summed additively, creating shared information channels
+Current Neptun implementation does **not** enforce explicit per-connection slice routing from config fields like `send_bandwidth`, `send_offset`, and `recv_offset`; communication currently uses dense attention plus gating.
 
-When communication neurons use message buffers, overlapping channels accumulate over time as well as across senders. This creates a persistent cooperative workspace where the same representational slice can encode consensus, disagreement, or uncertainty.
+With FIFO buffers and attention readout, temporal accumulation still occurs across rounds, but explicit per-connection channel slicing remains a conceptual extension rather than active routing logic.
 
 This overlap mechanism allows rich, multiplexed communication where a receiving model can integrate signals from multiple sources into the same representational subspace.
