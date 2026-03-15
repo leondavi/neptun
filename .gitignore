@@ -29,3 +29,6 @@ Thumbs.db
 runs/
 checkpoints/
 outputs/
+
+# Local agent context
+agent/
