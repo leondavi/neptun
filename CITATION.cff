@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it as follows."
+title: "Neptun: Distributed Neural and Bonds Network (DNBN)"
+type: software
+authors:
+  - family-names: "Leon"
+    given-names: "David"
+repository-code: "https://github.com/leondavi/neptun"
+url: "https://github.com/leondavi/neptun"
+license: "Research use only"

@@ -34,9 +34,42 @@ Sweep date: 2026-03-15. All variants use the 8-node bidirectional ring on CIFAR-
 | Model | Total Params | Conv Layers | Neurons | Comm Neurons | M | C |
 |-------|-------------|-------------|---------|--------------|---|---|
 | **DNBN 8-Node Tuned** | 9.11M | 56 (7/expert × 8) | 6,480 (810/expert × 8) | 2,048 (256/expert × 8) | 256 | 256 |
+| **DNBN 16-Node Low-Neuron (M48/C48)** | 4.00M | 112 (7/expert × 16) | 6,304 (394/expert × 16) | 768 (48/expert × 16) | 48 | 48 |
 | DNBN 8-Node Baseline | 9.11M | 56 (7/expert × 8) | 6,480 (810/expert × 8) | 2,048 (256/expert × 8) | 256 | 256 |
 | ResNet18 | 11.18M | 20 | 1,034 | 0 | — | — |
 | EfficientNet-B0 | 4.02M | 81 | 2,106 | 0 | — | — |
+
+## Updated DNBN Top-2 Comparison
+
+The two strongest DNBN performers currently tracked in this repository are:
+
+| Model | Dataset / Budget | Test Acc | F1 (macro) | Params | Conv Layers | Neurons | Comm Neurons |
+|-------|-------------------|----------|------------|--------|-------------|---------|--------------|
+| **DNBN 8-Node Tuned (Ring, M256/C256)** | CIFAR-10, 20 epochs | **87.2%** | **0.872** | 9.11M | 56 | 6,480 | 2,048 |
+| **DNBN 16-Node Low-Neuron (Ring, M48/C48)** | CIFAR-10, 10 epochs | **85.1%** | **0.851** | 4.00M | 112 | 6,304 | 768 |
+
+Sources:
+- 8-node tuned: `outputs/experiments/cifar10_20ep_tuned_20260315/all_results.csv`
+- 16-node low-neuron: `outputs/experiments/neuron_sweep_16node_20260315/all_results.csv`
+
+### Why Bond-Based Communication Is an Advantage vs Monolithic SOTA on Weak Multi-Device Setups
+
+Compared with monolithic baselines (ResNet18 / EfficientNet-B0), DNBN's communication neurons and learned bond strengths provide practical system-level advantages when compute and memory are distributed across weaker devices:
+
+1. **Low-dimensional inter-device messaging**
+    DNBN exchanges compact communication vectors (`C`) instead of full feature tensors from a centralized backbone. This reduces bandwidth pressure and makes multi-device training/inference more feasible on weak links.
+
+2. **Learned selective routing (bond biases)**
+    Bonds are trainable structural priors over which experts should communicate more strongly. This allows the system to avoid uniformly dense communication and focus message flow where it improves accuracy.
+
+3. **Per-device workload stays small while system capacity scales**
+    Capacity grows by adding experts, but each expert remains lightweight. This is better aligned with fleets of weak devices than requiring every device to host a single large monolithic SOTA model.
+
+4. **Graceful distributed inference behavior**
+    Multi-expert ensembles can retain strong aggregate predictions even when individual experts are weaker. This is useful in heterogeneous edge settings where device quality and latency vary.
+
+5. **Communication-performance tradeoff is tunable**
+    By adjusting `C`, topology, and number of nodes, DNBN can target different hardware/network budgets without fully redesigning the model family.
 
 ### DNBN Per-Expert Breakdown (×8 experts)
 

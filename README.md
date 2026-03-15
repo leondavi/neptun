@@ -106,6 +106,13 @@ The trainer supports **cosine annealing LR scheduling**, **gradient clipping**, 
 
 See [docs/dnbn_theory.md](docs/dnbn_theory.md) and [agent/background.md](agent/background.md) for the theoretical foundations — bond formation, communication protocols, and training objectives.
 
+## Citation
+
+If this repository is useful in your research, please cite it using [CITATION.cff](CITATION.cff).
+
+Author profile:
+- David Leon: https://scholar.google.com/citations?user=J3YceFQAAAAJ&hl=en
+
 ## License
 
 Research use only.
