@@ -4,6 +4,8 @@
 
 The DNBN graph-transformer architecture with tuned hyperparameters **outperforms ResNet18** on CIFAR-10 at 20 epochs, and achieves **99.5% test accuracy** on MNIST.
 
+Detailed neuron-sweep and 16-node low-neuron analysis is documented in [docs/comprehensive_results.md](docs/comprehensive_results.md).
+
 ---
 
 ## Hyperparameter Tuning (10 Epochs, CIFAR-10 Ring Topology)

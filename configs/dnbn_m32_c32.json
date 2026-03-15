@@ -1,0 +1,8 @@
+{
+    "M": 32,
+    "C": 32,
+    "num_heads": 4,
+    "buffer_size": 8,
+    "controller_hidden": 64,
+    "dropout": 0.1
+}
