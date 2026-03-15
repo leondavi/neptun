@@ -1,0 +1,173 @@
+{
+    "name": "MNIST 8-Node DNBN System (Bidirectional Ring) [Tuned]",
+    "nodes": {
+        "dnbn_0": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_1": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_2": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_3": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_4": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_5": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_6": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_7": {
+            "config": "configs/dnbn_default.json"
+        }
+    },
+    "connections": [
+        {
+            "from": "dnbn_0",
+            "to": "dnbn_1",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 0,
+            "recv_offset": 0
+        },
+        {
+            "from": "dnbn_1",
+            "to": "dnbn_0",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 0,
+            "recv_offset": 0
+        },
+        {
+            "from": "dnbn_1",
+            "to": "dnbn_2",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 16,
+            "recv_offset": 16
+        },
+        {
+            "from": "dnbn_2",
+            "to": "dnbn_1",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 16,
+            "recv_offset": 16
+        },
+        {
+            "from": "dnbn_2",
+            "to": "dnbn_3",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 32,
+            "recv_offset": 32
+        },
+        {
+            "from": "dnbn_3",
+            "to": "dnbn_2",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 32,
+            "recv_offset": 32
+        },
+        {
+            "from": "dnbn_3",
+            "to": "dnbn_4",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 48,
+            "recv_offset": 48
+        },
+        {
+            "from": "dnbn_4",
+            "to": "dnbn_3",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 48,
+            "recv_offset": 48
+        },
+        {
+            "from": "dnbn_4",
+            "to": "dnbn_5",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 0,
+            "recv_offset": 32
+        },
+        {
+            "from": "dnbn_5",
+            "to": "dnbn_4",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 0,
+            "recv_offset": 32
+        },
+        {
+            "from": "dnbn_5",
+            "to": "dnbn_6",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 16,
+            "recv_offset": 48
+        },
+        {
+            "from": "dnbn_6",
+            "to": "dnbn_5",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 16,
+            "recv_offset": 48
+        },
+        {
+            "from": "dnbn_6",
+            "to": "dnbn_7",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 32,
+            "recv_offset": 0
+        },
+        {
+            "from": "dnbn_7",
+            "to": "dnbn_6",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 32,
+            "recv_offset": 0
+        },
+        {
+            "from": "dnbn_7",
+            "to": "dnbn_0",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 48,
+            "recv_offset": 16
+        },
+        {
+            "from": "dnbn_0",
+            "to": "dnbn_7",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 48,
+            "recv_offset": 16
+        }
+    ],
+    "training": {
+        "epochs": 5,
+        "batch_size": 64,
+        "learning_rate": 0.001,
+        "communication_rounds": 5,
+        "bond_sparsity_lambda": 0.0,
+        "comm_cost_lambda": 0.0,
+        "lr_scheduler": "cosine",
+        "grad_clip": 1.0,
+        "weight_decay": 0.0001
+    },
+    "evaluation": {
+        "batch_size": 256
+    }
+}

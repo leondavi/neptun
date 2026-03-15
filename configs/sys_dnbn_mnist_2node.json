@@ -1,0 +1,40 @@
+{
+    "name": "MNIST 2-Node DNBN System",
+    "nodes": {
+        "dnbn_0": {
+            "config": "configs/dnbn_default.json"
+        },
+        "dnbn_1": {
+            "config": "configs/dnbn_default.json"
+        }
+    },
+    "connections": [
+        {
+            "from": "dnbn_0",
+            "to": "dnbn_1",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 0,
+            "recv_offset": 0
+        },
+        {
+            "from": "dnbn_1",
+            "to": "dnbn_0",
+            "rate": 1.0,
+            "send_bandwidth": 64,
+            "send_offset": 0,
+            "recv_offset": 0
+        }
+    ],
+    "training": {
+        "epochs": 5,
+        "batch_size": 64,
+        "learning_rate": 0.001,
+        "communication_rounds": 3,
+        "bond_sparsity_lambda": 0.01,
+        "comm_cost_lambda": 0.001
+    },
+    "evaluation": {
+        "batch_size": 256
+    }
+}
