@@ -1,6 +1,22 @@
 # Neptun — Distributed Neural and Bonds Network (DNBN)
 
-Neptun is a research framework for **Distributed Neural and Bonds Networks (DNBN)** — a graph-transformer architecture where multiple expert nodes with ConvNet backbones cooperate through multi-head attention message passing, recurrent state evolution, and learnable topology.
+## Neptun
+
+Neptun explores DNBN, a **Distributed Neural and Bonds Network** in which multiple neural experts operate as nodes in a sparse communication graph.
+Each node is a competent expert with its own backbone, while bonds define how information is exchanged, coordinated, and refined across the network over repeated communication rounds.
+Rather than treating inter-node interaction as a fixed stack of feedforward graph layers, DNBN treats communication as a recurrent process in which node states evolve over time through message passing, memory, and learned topology.
+
+The motivation behind DNBN is practical: many real problems are not naturally solved by a single monolithic model.
+In distributed sensing, modular perception, multi-stage reasoning, or expert specialization, different subnetworks may hold different local competencies and should cooperate without requiring full dense connectivity or a centralized fusion bottleneck.
+DNBN is designed to study that setting directly: how specialized experts can exchange compact learned messages, update their internal state, and progressively improve a collective representation or decision.
+
+In this view, bonds are not just static edges.
+They are learnable communication pathways that determine which experts should influence one another, how strongly they should communicate, and how information should propagate through the system over time.
+This makes the architecture closer to a cooperative dynamical system of neural experts than to a conventional deep network with a fixed computation path.
+
+DNBN draws on familiar ideas from recurrent graph propagation, attention-based communication, and expert specialization.
+Its research focus is the combination of these ideas into a sparse, dynamic, recurrent expert graph where communication itself is a first-class learned process.
+Neptun is therefore a research framework for experimenting with neural cooperation, adaptive routing, and temporally evolving communication between specialized models.
 
 ## Key Results
 
