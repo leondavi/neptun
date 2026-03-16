@@ -9,12 +9,43 @@ import torch.nn as nn
 from torchvision.models import efficientnet_b0, resnet18
 
 
+class _YOLOv8Wrapper(nn.Module):
+    """Wraps an ultralytics ClassificationModel so forward always returns a tensor.
+
+    In eval mode the underlying model returns (logits, softmax); this wrapper
+    extracts only logits so it plugs into standard cross-entropy pipelines.
+    """
+
+    def __init__(self, inner: nn.Module):
+        super().__init__()
+        self.inner = inner
+
+    def forward(self, x):
+        out = self.inner(x)
+        if isinstance(out, tuple):
+            return out[0]
+        return out
+
+
+def _build_yolov8s_cls(num_classes: int) -> nn.Module:
+    """Build a YOLOv8s classification model adapted for *num_classes*."""
+    from ultralytics import YOLO
+    yolo = YOLO('yolov8s-cls.yaml')
+    model = yolo.model
+    # Replace the final linear layer for the target number of classes
+    head = model.model[-1]
+    head.linear = nn.Linear(head.linear.in_features, num_classes)
+    return _YOLOv8Wrapper(model)
+
+
 def build_baseline(model_name: str, num_classes: int) -> nn.Module:
     name = model_name.lower()
     if name == 'resnet18':
         return resnet18(num_classes=num_classes)
     if name == 'efficientnet_b0':
         return efficientnet_b0(num_classes=num_classes)
+    if name in ('yolov8s', 'yolov8s-cls', 'yolo_small'):
+        return _build_yolov8s_cls(num_classes)
     raise ValueError(f"Unsupported baseline model: {model_name}")
 
 
