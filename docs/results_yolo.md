@@ -1,60 +1,59 @@
-# DNBN vs YOLOv8s-cls — CIFAR-10 Classification Results
+# DNBN vs YOLO — STL-10 Classification Results
 
 ## Experiment Overview
 
-This experiment compares the DNBN 8-node cooperative system against YOLOv8s-cls (YOLO-small classification variant) on CIFAR-10 image classification. The goal is to find the smallest DNBN configuration that outperforms the YOLO-small SOTA architecture, demonstrating that cooperative multi-model communication can achieve superior accuracy with far fewer parameters.
+This experiment compares the DNBN 8-node cooperative system against YOLOv8s-cls and YOLO11s-cls (YOLO-small classification variants) on STL-10 image classification. The goal is to evaluate how cooperative multi-model communication scales to higher-resolution images (96×96) with limited labeled training data (5,000 samples).
 
-**Dataset:** CIFAR-10 (32×32 RGB, 10 classes)
+**Dataset:** STL-10 (96×96 RGB, 10 classes, 5,000 train / 8,000 test)
 **Device:** Apple MPS (Mac Mini)
-**Comparison method:** Same training pipeline (Adam optimizer, cross-entropy loss), same data splits.
+**Comparison method:** Same training pipeline (Adam optimizer, cross-entropy loss), same data splits. All models trained from scratch (no pretrained weights).
 
 ---
 
 ## YOLOv8s-cls Baseline Sweep
 
-YOLOv8s-cls is the classification variant of the YOLO-small detection architecture. It uses a CSPDarknet backbone with a classification head. The model was adapted for 10 classes and trained from scratch (no pretrained weights) on 32×32 CIFAR-10 images.
+YOLOv8s-cls is the classification variant of the YOLO-small detection architecture. It uses a CSPDarknet backbone with a classification head. The model was trained from scratch on 96×96 STL-10 images.
 
 | Config | Epochs | LR | Test Accuracy | Test F1 | Params | Time |
 |--------|--------|----|---------------|---------|--------|------|
-| yolov8s_e10_lr0.001 | 10 | 0.001 | 0.7606 | 0.7608 | 5,093,546 | 405s |
-| **yolov8s_e20_lr0.001** | **20** | **0.001** | **0.7862** | **0.7873** | **5,093,546** | **844s** |
-| yolov8s_e30_lr0.001 | 30 | 0.001 | 0.7847 | 0.7852 | 5,093,546 | 1185s |
-| yolov8s_e20_lr0.0005 | 20 | 0.0005 | 0.7665 | 0.7673 | 5,093,546 | 778s |
+| yolov8s_e10_lr0.001 | 10 | 0.001 | 0.5659 | 0.5644 | 5,093,546 | 291s |
+| yolov8s_e20_lr0.001 | 20 | 0.001 | 0.5828 | 0.5766 | 5,093,546 | 570s |
+| **yolov8s_e30_lr0.001** | **30** | **0.001** | **0.5929** | **0.5940** | **5,093,546** | **841s** |
+| yolov8s_e20_lr0.0005 | 20 | 0.0005 | 0.5753 | 0.5811 | 5,093,546 | 557s |
 
-**Best YOLO-small result:** 78.62% accuracy, 78.73% F1 at 20 epochs with lr=0.001.
+**Best YOLOv8s result:** 59.29% accuracy, 59.40% F1 at 30 epochs with lr=0.001.
 
-Note: YOLOv8s-cls is designed for larger input resolutions (224×224+). Performance on 32×32 CIFAR-10 is limited by the architecture's aggressive downsampling through multiple stride-2 convolutions, which reduces spatial resolution quickly in small images.
+---
+
+## YOLO11s-cls Baseline Sweep
+
+YOLO11s-cls is the classification variant of YOLO11-small, a newer architecture with 86 layers vs YOLOv8's 56 layers. Also trained from scratch.
+
+| Config | Epochs | LR | Test Accuracy | Test F1 | Params | Time |
+|--------|--------|----|---------------|---------|--------|------|
+| yolo11s_e10_lr0.001 | 10 | 0.001 | 0.4850 | 0.4654 | 5,455,818 | 288s |
+| yolo11s_e20_lr0.001 | 20 | 0.001 | 0.5751 | 0.5742 | 5,455,818 | 577s |
+| **yolo11s_e30_lr0.001** | **30** | **0.001** | **0.5931** | **0.5936** | **5,455,818** | **885s** |
+| yolo11s_e20_lr0.0005 | 20 | 0.0005 | 0.5705 | 0.5730 | 5,455,818 | 587s |
+
+**Best YOLO11s result:** 59.31% accuracy, 59.36% F1 at 30 epochs with lr=0.001.
+
+Note: YOLOv8s and YOLO11s achieve nearly identical best accuracy (~59.3%) on STL-10. YOLO11s has 7% more parameters but does not improve performance at this resolution and data scale.
 
 ---
 
 ## DNBN 8-Node Neuron Sweep
 
-DNBN 8-node systems with ring topology were trained for 10 epochs with cosine LR scheduling. Communication neuron sizes (M = C) were swept from 48 down to 16 to find the minimum viable configuration.
+DNBN 8-node systems with ring topology were trained for 10 epochs with cosine LR scheduling. Communication neuron sizes (M = C) were swept from 48 down to 16.
 
-| M/C | Test Accuracy | Test F1 | Params | vs YOLO Acc | vs YOLO F1 |
-|-----|---------------|---------|--------|-------------|------------|
-| 48 | 0.8295 | 0.8301 | 2,002,801 | +4.33% | +4.28% |
-| **32** | **0.8332** | **0.8327** | **1,814,577** | **+4.70%** | **+4.54%** |
-| 24 | 0.8237 | 0.8237 | 1,739,665 | +3.75% | +3.64% |
-| 16 | 0.8214 | 0.8215 | 1,677,553 | +3.52% | +3.42% |
+| M/C | Test Accuracy | Test F1 | Params | vs Best YOLO Acc | vs Best YOLO F1 |
+|-----|---------------|---------|--------|------------------|-----------------|
+| **48** | **0.5428** | **0.5281** | **2,002,801** | **−5.03%** | **−6.59%** |
+| 16 | 0.5139 | 0.4842 | 1,677,553 | −7.92% | −10.98% |
+| 24 | 0.5080 | 0.4917 | 1,739,665 | −8.51% | −10.23% |
+| 32 | 0.4980 | 0.4744 | 1,814,577 | −9.51% | −11.96% |
 
-**All DNBN configurations outperform the best YOLO-small by 3.5–4.7 percentage points.**
-
----
-
-## Optimal DNBN Configuration
-
-**Best efficiency (accuracy per parameter):** M32/C32
-
-- Accuracy: **83.32%** (vs YOLO's 78.62%, +4.70pp)
-- F1: **83.27%** (vs YOLO's 78.73%, +4.54pp)
-- Parameters: **1,814,577** (vs YOLO's 5,093,546, **2.81× fewer**)
-
-**Smallest viable DNBN:** M16/C16
-
-- Accuracy: **82.14%** (still +3.52pp above YOLO)
-- F1: **82.15%** (still +3.42pp above YOLO)
-- Parameters: **1,677,553** (3.04× fewer than YOLO)
+**Best DNBN result:** M48/C48 with 54.28% accuracy, 52.81% F1 (2.00M params).
 
 ---
 
@@ -62,30 +61,32 @@ DNBN 8-node systems with ring topology were trained for 10 epochs with cosine LR
 
 | Model | Architecture | Params | Accuracy | F1 | Params/Accuracy |
 |-------|-------------|--------|----------|-----|-----------------|
-| YOLOv8s-cls | CSPDarknet + Classify | 5,093,546 | 78.62% | 78.73% | 64,789 |
-| DNBN M32/C32 (8-node) | 8× ConvNet + GRU comm | 1,814,577 | 83.32% | 83.27% | 21,778 |
-| DNBN M16/C16 (8-node) | 8× ConvNet + GRU comm | 1,677,553 | 82.14% | 82.15% | 20,424 |
+| YOLOv8s-cls (30ep) | CSPDarknet + Classify | 5,093,546 | 59.29% | 59.40% | 85,912 |
+| YOLO11s-cls (30ep) | YOLO11 Backbone + Classify | 5,455,818 | 59.31% | 59.36% | 91,990 |
+| DNBN M48/C48 (8-node, 10ep) | 8× ConvNet + GRU comm | 2,002,801 | 54.28% | 52.81% | 36,904 |
 
-DNBN achieves **3× better parameter efficiency** (params per accuracy point) compared to YOLOv8s-cls.
+DNBN achieves **2.3× better parameter efficiency** (params per accuracy point) compared to YOLOv8s-cls, despite lower absolute accuracy.
 
 ---
 
-## Why DNBN Outperforms YOLO-small on CIFAR-10
+## Analysis: Why YOLO Leads on STL-10
 
-1. **Architecture fit:** YOLOv8s-cls uses aggressive spatial downsampling (multiple stride-2 convolutions) designed for high-resolution inputs. On 32×32 images, this destroys spatial information early. DNBN's compact ConvNet backbone with adaptive pooling is better suited for small images.
+Unlike CIFAR-10 (where DNBN outperformed YOLO by 4.7pp), on STL-10 the YOLO baselines outperform DNBN by ~5pp. Several factors explain this:
 
-2. **Cooperative ensemble effect:** DNBN's 8-node ensemble with learned communication produces a joint prediction that is more robust than any single model. Each expert can specialize on different feature subsets and share complementary information through the communication protocol.
+1. **Limited training data:** STL-10 has only 5,000 labeled training images (vs 50,000 for CIFAR-10). DNBN's 8-node ensemble has more parameters to coordinate but each expert sees the same small dataset, making it harder for the communication protocol to develop complementary specializations.
 
-3. **Communication-driven specialization:** The bond-bias attention and gated message passing allow DNBN experts to develop complementary representations without needing the large feature capacity of a monolithic architecture like YOLO.
+2. **Higher resolution benefits YOLO:** STL-10 images are 96×96 — much closer to YOLO's design target (224×224+). YOLO's multi-stage downsampling backbone is well-suited at this resolution, whereas on 32×32 CIFAR-10 it destroyed spatial features too aggressively.
 
-4. **Parameter efficiency:** DNBN distributes capacity across 8 small experts instead of one large backbone. Each expert has ~210K params (M32) but their cooperative ensemble achieves accuracy that would require a much larger single model.
+3. **Epoch disparity:** YOLO baselines were trained for up to 30 epochs while DNBN ran for 10 epochs. DNBN's per-epoch training cost is higher due to communication rounds, so extending training could narrow the gap.
+
+4. **Parameter efficiency still favors DNBN:** Despite lower accuracy, DNBN M48 uses only 2.00M params (2.5× fewer than YOLO's 5.09M), achieving 54.3% vs 59.3%. The params-per-accuracy-point ratio favors DNBN (36,904 vs 85,912).
 
 ---
 
 ## Training Configuration
 
-### YOLO Baseline
-- Optimizer: Adam, lr=0.001
+### YOLO Baselines
+- Optimizer: Adam, lr=0.001 (and 0.0005 sweep)
 - No LR scheduler
 - Batch size: 64
 - Data augmentation: random horizontal flip + normalization
@@ -98,11 +99,10 @@ DNBN achieves **3× better parameter efficiency** (params per accuracy point) co
 - Topology: ring (bidirectional)
 - Bond sparsity lambda: 0.0
 - Gradient clipping: 1.0
+- Epochs: 10
 
 ---
 
 ## Conclusion
 
-DNBN with 8 cooperative workers decisively outperforms YOLOv8s-cls on CIFAR-10 classification across all tested neuron sizes. Even the smallest DNBN configuration (M16/C16, 1.68M params) beats YOLO-small (5.09M params) by 3.5 percentage points in both accuracy and F1 score. The optimal DNBN configuration (M32/C32) achieves 83.3% accuracy with only 1.81M parameters — **2.81× fewer parameters and 4.7pp higher accuracy** than the YOLO-small baseline.
-
-This demonstrates that cooperative multi-model communication (the DNBN paradigm) offers a compelling alternative to scaling up individual model architectures for image classification, especially on resource-constrained devices where multiple small models can outperform a single large one.
+On STL-10 (96×96, 5K training images), both YOLOv8s-cls and YOLO11s-cls reach ~59.3% accuracy at 30 epochs, while the best DNBN 8-node configuration (M48/C48) achieves 54.3% at 10 epochs with 2.5× fewer parameters. The limited training set size and higher image resolution favor YOLO's monolithic backbone over DNBN's distributed expert approach on this benchmark. DNBN continues to offer superior parameter efficiency (2.3× better params-per-accuracy-point), suggesting that with more training data or longer training, the cooperative multi-model approach could close the gap.

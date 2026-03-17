@@ -38,6 +38,16 @@ def _build_yolov8s_cls(num_classes: int) -> nn.Module:
     return _YOLOv8Wrapper(model)
 
 
+def _build_yolo11s_cls(num_classes: int) -> nn.Module:
+    """Build a YOLO11s classification model adapted for *num_classes*."""
+    from ultralytics import YOLO
+    yolo = YOLO('yolo11s-cls.yaml')
+    model = yolo.model
+    head = model.model[-1]
+    head.linear = nn.Linear(head.linear.in_features, num_classes)
+    return _YOLOv8Wrapper(model)
+
+
 def build_baseline(model_name: str, num_classes: int) -> nn.Module:
     name = model_name.lower()
     if name == 'resnet18':
@@ -46,6 +56,8 @@ def build_baseline(model_name: str, num_classes: int) -> nn.Module:
         return efficientnet_b0(num_classes=num_classes)
     if name in ('yolov8s', 'yolov8s-cls', 'yolo_small'):
         return _build_yolov8s_cls(num_classes)
+    if name in ('yolo11s', 'yolo11s-cls'):
+        return _build_yolo11s_cls(num_classes)
     raise ValueError(f"Unsupported baseline model: {model_name}")
 
 

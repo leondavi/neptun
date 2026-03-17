@@ -1,4 +1,4 @@
-"""Dataset loading for MNIST and CIFAR-10."""
+"""Dataset loading for MNIST, CIFAR-10, and STL-10."""
 
 import os
 
@@ -47,8 +47,25 @@ def get_dataset(name, batch_size=64, val_split=0.1, seed=42):
         input_shape = (3, 32, 32)
         output_dim = 10
 
+    elif name == 'stl10':
+        transform_train = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4467, 0.4398, 0.4066),
+                                 (0.2603, 0.2566, 0.2713)),
+        ])
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4467, 0.4398, 0.4066),
+                                 (0.2603, 0.2566, 0.2713)),
+        ])
+        train_ds = datasets.STL10(DATA_DIR, split='train', download=True, transform=transform_train)
+        test_ds = datasets.STL10(DATA_DIR, split='test', download=True, transform=transform_test)
+        input_shape = (3, 96, 96)
+        output_dim = 10
+
     else:
-        raise ValueError(f"Unknown dataset: {name}. Supported: mnist, cifar10")
+        raise ValueError(f"Unknown dataset: {name}. Supported: mnist, cifar10, stl10")
 
     # Train / validation split
     val_size = int(len(train_ds) * val_split)
@@ -77,6 +94,10 @@ def download_all():
     print("Downloading CIFAR-10...")
     datasets.CIFAR10(DATA_DIR, train=True, download=True)
     datasets.CIFAR10(DATA_DIR, train=False, download=True)
+
+    print("Downloading STL-10...")
+    datasets.STL10(DATA_DIR, split='train', download=True)
+    datasets.STL10(DATA_DIR, split='test', download=True)
 
     print("All datasets downloaded.")
 
