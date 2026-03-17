@@ -64,7 +64,7 @@ Each DNBN system consists of **N expert nodes** connected via a communication gr
 - **ConvNet Backbone**: 7-layer ResNet-like feature extractor (3→32→64→128) producing M-dimensional embeddings
 - **Communication Controller**: GRU-based controller that learns send/receive gates and attention biases
 - **Multi-Head Attention**: Q/K/V projections for graph transformer message passing (4 heads, C=256)
-- **Recurrent State GRU**: Hidden state evolves across communication rounds via BPTT
+- **Recurrent State GRU**: Hidden state evolves across communication rounds via [BPTT](docs/dnbn_theory.md#backpropagation-through-time-bptt)
 - **Temporal Buffers**: Sliding window of past messages with learned decay for historical context
 
 Communication rounds are treated as **recurrent time steps** — shared parameters, evolving states, trained via backpropagation through time. This enables iterative reasoning rather than single-pass feedforward processing.
@@ -143,7 +143,7 @@ All expert nodes train cooperatively end-to-end:
 2. Experts exchange messages through multi-head attention over multiple communication rounds
 3. Hidden states evolve recurrently across rounds
 4. Each expert produces a classification; the ensemble averages logits
-5. Gradients flow through the entire communication graph via BPTT
+5. Gradients flow through the entire communication graph via [BPTT](docs/dnbn_theory.md#backpropagation-through-time-bptt)
 
 The trainer supports **cosine annealing LR scheduling**, **gradient clipping**, and **weight decay**.
 

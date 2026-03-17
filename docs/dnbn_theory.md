@@ -212,3 +212,11 @@ Current Neptun implementation does **not** enforce explicit per-connection slice
 With FIFO buffers and attention readout, temporal accumulation still occurs across rounds, but explicit per-connection channel slicing remains a conceptual extension rather than active routing logic.
 
 This overlap mechanism allows rich, multiplexed communication where a receiving model can integrate signals from multiple sources into the same representational subspace.
+
+## Backpropagation Through Time (BPTT)
+
+BPTT is the standard algorithm for training recurrent neural networks. It "unrolls" the recurrent computation across time steps and then applies the chain rule backwards through all of them to compute gradients.
+
+In DNBN's context, the T=5 communication rounds are treated as recurrent time steps — the same expert parameters are reused each round as hidden states evolve. During training, the computation graph is unrolled across all 5 rounds, and gradients propagate backward from the final classification loss through every round's attention, gating, GRU state updates, and message passing. This means the system learns not just what to compute at each round, but how early-round messages affect late-round decisions — enabling multi-step reasoning strategies like "ask a clarifying question in round 2, integrate the answer in round 3."
+
+The trade-off is memory: the entire sequence of intermediate activations across all rounds must be stored for the backward pass, which is why DNBN's training is more memory-intensive than a feedforward model of similar parameter count.
