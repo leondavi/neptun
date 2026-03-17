@@ -198,7 +198,7 @@ flowchart LR
 	D --> E[FIFO Buffer Update B_j^t]
 	E --> F[Buffer Attention Readout r_j^t]
 	F --> G[Receive Gate]
-	G --> H[State GRU Update h_j^{t+1}]
+	G --> H["State GRU Update h_j^(t+1)"]
 ```
 
 The key cooperative loop is that updated receiver states produce new embeddings in the next round, so attention and message buffer content co-evolve over time.
