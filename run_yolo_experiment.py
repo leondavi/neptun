@@ -85,14 +85,15 @@ def run_yolo_sweep(model_key, model_label, configs, train_loader, val_loader,
 
 
 def run_dnbn_sweep(dnbn_configs, train_loader, val_loader, test_loader,
-                   input_shape, output_dim, output_dir, device_str):
+                   input_shape, output_dim, output_dir, device_str,
+                   epochs=30):
     """Train DNBN system across multiple M/C configs."""
     device = torch.device(device_str)
     repo_root = os.path.dirname(os.path.abspath(__file__))
     all_rows = []
 
     for i, config_path in enumerate(dnbn_configs, 1):
-        run_name = Path(config_path).stem
+        run_name = Path(config_path).stem + f"_e{epochs}"
         run_dir = output_dir / run_name
         run_dir.mkdir(exist_ok=True)
 
@@ -110,15 +111,16 @@ def run_dnbn_sweep(dnbn_configs, train_loader, val_loader, test_loader,
             with open(dnbn_path) as f:
                 node_cfg["params"] = json.load(f)
 
-        sys_cfg["training"]["epochs"] = 10
+        sys_cfg["training"]["epochs"] = epochs
 
         system = DNBNSystem(sys_cfg, input_channels=input_shape[0],
                             output_dim=output_dim)
         total_params = sum(p.numel() for p in system.parameters())
         first_node_params = next(iter(sys_cfg["nodes"].values()))["params"]
-        mc = first_node_params.get("C", 256)
+        m_val = first_node_params.get("M", 256)
+        c_val = first_node_params.get("C", 256)
 
-        print(f"M/C: {mc}, Nodes: 8, Params: {total_params:,}")
+        print(f"M: {m_val}, C: {c_val}, Nodes: 8, Epochs: {epochs}, Params: {total_params:,}")
 
         t0 = time.time()
         trainer = Trainer(system, train_loader, val_loader, sys_cfg)
@@ -133,10 +135,11 @@ def run_dnbn_sweep(dnbn_configs, train_loader, val_loader, test_loader,
 
         row = {
             "run_name": run_name,
-            "M_C": mc,
+            "M": m_val,
+            "C": c_val,
             "nodes": 8,
             "total_params": total_params,
-            "epochs": 10,
+            "epochs": epochs,
             "test_accuracy": ensemble["accuracy"],
             "test_f1_macro": ensemble["f1_macro"],
             "test_precision_macro": ensemble["precision_macro"],
@@ -209,6 +212,7 @@ def main():
     print("# DNBN 8-Node Neuron Sweep")
     print("#" * 72)
     dnbn_configs = [
+        "configs/sys_dnbn_stl10_8node_m64c48_tuned.json",
         "configs/sys_dnbn_cifar10_8node_m48c48_tuned.json",
         "configs/sys_dnbn_cifar10_8node_m32c32_tuned.json",
         "configs/sys_dnbn_cifar10_8node_m24c24_tuned.json",
@@ -216,7 +220,7 @@ def main():
     ]
     dnbn_rows = run_dnbn_sweep(
         dnbn_configs, train_loader, val_loader, test_loader,
-        input_shape, output_dim, output_dir, device,
+        input_shape, output_dim, output_dir, device, epochs=30,
     )
 
     agg = output_dir / "dnbn_sweep_results.csv"
